@@ -1,0 +1,2 @@
+User database: Username and password
+Document Table: DocumentID, UserID, Context, Analyzed Context
