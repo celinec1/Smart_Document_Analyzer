@@ -39,7 +39,9 @@ Implements a queue for managing the processing of NLP analysis and secure file u
 ### Docker:
 <img width="332" alt="Screenshot 2024-03-24 at 10 51 41 PM" src="https://github.com/celinec1/Smart_Document_Analyzer/assets/99696770/902f7635-15e6-4785-8001-337c19fe7a7e">
 
+
 <img width="370" alt="Screenshot 2024-03-24 at 10 51 45 PM" src="https://github.com/celinec1/Smart_Document_Analyzer/assets/99696770/b4bb69cb-4023-459d-a1b9-f2b7244a7d02">
+
 
 <img width="392" alt="Screenshot 2024-03-24 at 10 51 50 PM" src="https://github.com/celinec1/Smart_Document_Analyzer/assets/99696770/b620b8c6-b687-46d7-b338-1e3722825e13">
 
