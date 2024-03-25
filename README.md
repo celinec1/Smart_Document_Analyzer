@@ -1,6 +1,6 @@
 # Smart_Document_Analyzer
 
-Smart_Document_Analyzer will be able to save and parse through PDF documents for keywords and phrases the user is looking for. After finding its occurrences in the document, it will complete text analysis.
+Smart Doc offers the capability to save and parse PDF, JPEG, and TXT documents for specific keywords and phrases tailored to user interests. Users are required to log in or register with a unique username, ensuring no duplication. Leveraging OpenAI, it generates concise summaries, while Google Search integration fetches supplementary websites and sources to enrich these summaries. Additionally, the program provides links to these sources, offering users direct insights into the origin of the supplementary information.
 
 ## File Structure
 
