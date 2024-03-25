@@ -36,7 +36,7 @@ Database schema:
 ### Queue Implementation:
 Implements a queue for managing the processing of NLP analysis and secure file uploads. This ensures efficient handling of tasks and scalability of the system.
 
-### Docker:
+### Docker/front-end for now ~until I implement and add frontend :) ~
 1. <img width="332" alt="Screenshot 2024-03-24 at 10 51 41 PM" src="https://github.com/celinec1/Smart_Document_Analyzer/assets/99696770/902f7635-15e6-4785-8001-337c19fe7a7e">
 
 
