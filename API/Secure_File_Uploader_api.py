@@ -2,6 +2,7 @@ from pymongo import MongoClient
 import gridfs
 from bson import ObjectId
 from werkzeug.utils import secure_filename
+import os
 
 # MongoDB setup
 client = MongoClient('mongodb://localhost:27017/')
@@ -33,11 +34,19 @@ def get_file_from_db(file_id, download_path):
         file_id = ObjectId(file_id)
         file = fs.get(file_id)
         output_path = os.path.join(download_path, file.filename)
+        
+        # Ensure directory exists
+        if not os.path.exists(download_path):
+            os.makedirs(download_path)
+        
+        # Save the file locally
         with open(output_path, 'wb') as file_to_save:
             file_to_save.write(file.read())
-        return output_path
+        return output_path, "File retrieved successfully"
     except gridfs.NoFile:
         return None, "File not found"
+    except Exception as e:
+        return None, f"An error occurred: {str(e)}"
 
 def delete_file_from_db(username, folder_name, file_id):
     try:
@@ -67,23 +76,23 @@ def main():
     # print(upload_result)
     
     # # Retrieve a file
-    # file_id = input("Enter the file_id of the file you want to retrieve: ")
-    # download_path = input("Enter the directory where you want to save the downloaded file: ")
-    # saved_file_path, message = get_file_from_db(file_id, download_path)
+    file_id = input("Enter the file_id of the file you want to retrieve: ")
+    download_path = input("Enter the directory where you want to save the downloaded file: ")
+    saved_file_path, message = get_file_from_db(file_id, download_path)
     
     
-    # if saved_file_path:
-    #     print(f"Retrieved and wrote file to {saved_file_path}")
-    # else:
-    #     print(message)
+    if saved_file_path:
+        print(f"Retrieved and wrote file to {saved_file_path}")
+    else:
+        print(message)
 
-    delete_file = input("Do you want to delete a file? (yes/no): ")
-    if delete_file.lower() == 'yes':
-        username = input("Username: ")
-        folder_name = input("Folder name: ")
-        file_id_to_delete = input("Enter the file_id of the file you want to delete: ")
-        deletion_result = delete_file_from_db(username, folder_name, file_id_to_delete)
-        print(deletion_result)
+    # delete_file = input("Do you want to delete a file? (yes/no): ")
+    # if delete_file.lower() == 'yes':
+    #     username = input("Username: ")
+    #     folder_name = input("Folder name: ")
+    #     file_id_to_delete = input("Enter the file_id of the file you want to delete: ")
+    #     deletion_result = delete_file_from_db(username, folder_name, file_id_to_delete)
+    #     print(deletion_result)
 
 if __name__ == '__main__':
     main()
