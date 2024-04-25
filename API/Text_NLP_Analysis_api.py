@@ -1,99 +1,99 @@
 import os
-import fitz  # PyMuPDF
-import nltk
-from flask import Flask, request, jsonify
-from werkzeug.utils import secure_filename
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas
-import openai
+import requests
+from pymongo import MongoClient
+import gridfs
+from bson import ObjectId
+import pdfplumber
 
-app = Flask(__name__)
+# MongoDB setup
+client = MongoClient('mongodb://localhost:27017/')
+db = client["Smart_Doc"]
+fs = gridfs.GridFS(db)
+api_key = ''
 
-# the upload_folder is a placeholder for now
-UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'pdf', 'txt', 'jpeg'}
-openai.api_key = 'my_openai_key'
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+def get_file_content_from_db(file_id):
+    """Retrieve file content from GridFS by file ID, decode based on file type, and return metadata."""
+    try:
+        file_id = ObjectId(file_id)
+        file = fs.get(file_id)
+        print(f"Found file with ID {file_id}. Content type: {file.content_type}")  # Diagnostic information
+        if file.content_type == 'text/plain':
+            content = file.read().decode('utf-8')
+            return content, file.filename, file.metadata
+        elif file.content_type == 'application/pdf':
+            with pdfplumber.open(file) as pdf:
+                pages = [page.extract_text() for page in pdf.pages]
+                content = ' '.join(filter(None, pages))  # Join non-None content
+            return content, file.filename, file.metadata
+        else:
+            return "Unsupported file type for summarization: {}".format(file.content_type), None, None
+    except gridfs.NoFile:
+        return "File not found.", None, None
+    except UnicodeDecodeError as e:
+        return f"Unicode decoding error: {str(e)}", None, None
+    except Exception as e:
+        return f"Error processing file: {str(e)}", None, None
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+def summarize_text_with_chatgpt(text, api_key):
+    """Uses ChatGPT to generate a summary for the provided text."""
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+    }
+    data = {
+        'model': 'gpt-3.5-turbo',  # Ensure this model is available and appropriate for your usage
+        'messages': [{'role': 'system', 'content': 'Summarize this text:'},
+                     {'role': 'user', 'content': text}],
+        'max_tokens': 150
+    }
+    response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data)
+    if response.status_code == 200:
+        return response.json()['choices'][0]['message']['content'].strip()
+    else:
+        return f"Failed to generate summary, status code {response.status_code}, response: {response.text}"
 
-def summarize_text(text):
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=f"Summarize this text:\n\n{text}",
-        temperature=0.7,
-        max_tokens=150,
-        top_p=1.0,
-        frequency_penalty=0.0,
-        presence_penalty=0.0
+
+def store_summary_in_db(username, folder_name, original_filename, summary):
+    """Store the generated summary in MongoDB within a specific user's folder based on username."""
+    client = MongoClient('mongodb://localhost:27017/')
+    db = client["Smart_Doc"]
+    fs = gridfs.GridFS(db)
+
+    new_filename = f"{os.path.splitext(original_filename)[0]}_analyzed.txt"
+    summary_bytes = summary.encode('utf-8')  # Convert summary string to bytes
+    file_id = fs.put(summary_bytes, filename=new_filename, content_type='text/plain')
+
+    # Now update the user document with this new file reference
+    db.users.update_one(
+        {'username': username, 'folders.folder_name': folder_name},
+        {'$push': {'folders.$.files': {'file_name': new_filename, 'file_id': file_id}}}
     )
-    return response.choices[0].text.strip()
+    return file_id
 
-def generate_search_query(summary):
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=f"Generate a concise search query based on this summary:\n\n{summary}",
-        temperature=0.5,
-        max_tokens=60,
-        top_p=1.0,
-        frequency_penalty=0.0,
-        presence_penalty=0.0
-    )
-    return response.choices[0].text.strip()
 
-@app.route('/text_nlp_analysis', methods=['POST'])
-def text_nlp_analysis_api():
-    if 'file' not in request.files:
-        return jsonify({"error": "File part is missing"}), 400
-    file = request.files['file']
-    if not file or not allowed_file(file.filename):
-        return jsonify({"error": "Invalid file type"}), 400
-
-    filename = secure_filename(file.filename)
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(file_path)
-
-    # Read and summarize file content
-    text = ""
-    if filename.endswith('.txt'):
-        with open(file_path, 'r') as f:
-            text = f.read()
-    elif filename.endswith('.pdf'):
-        with fitz.open(file_path) as doc:
-            text = " ".join(page.get_text() for page in doc)
-
-    paragraphs = text.split('\n\n')
-    paragraph_summaries = [summarize_text(paragraph) for paragraph in paragraphs]
-    overall_summary = summarize_text(text)
-
-    # this search query is for the feed ingester
-    search_query = generate_search_query(overall_summary)
-
-    # Generate PDF with summaries
-    summary_pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], f"NLP_analysis_{filename}.pdf")
-    c = canvas.Canvas(summary_pdf_path, pagesize=letter)
-    text_object = c.beginText(40, 750)
-    text_object.textLine("Overall Summary:")
-    text_object.textLine(overall_summary)
-    text_object.textLine("\nParagraph Summaries:")
-    for summary in paragraph_summaries:
-        text_object.textLine(summary)
-        text_object.textLine("")
-    # have to test to see if google search works
-    text_object.textLine("\nSearch Query (For Internal Use):")
-    text_object.textLine(search_query)
-    c.drawText(text_object)
-    c.save()
-
-    # Save the search query for use in feed ingester api
-    with open(os.path.join(app.config['UPLOAD_FOLDER'], f"{filename}_search_query.txt"), "w") as f:
-        f.write(search_query)
-
-    return jsonify({"status": "Analysis complete", "summary_pdf": summary_pdf_path, "search_query": search_query})
+def main():
+    username = input("Enter username: ")
+    folder_name = input("Enter folder name: ")
+    file_id_input = input("Enter the file_id of the text file you want to summarize: ")
+    content, original_filename, _ = get_file_content_from_db(file_id_input)
+    
+    if original_filename is None:
+        print("Failed to retrieve the file or unsupported file type.")
+        return
+    
+    if content.startswith("File not found") or content.startswith("Error"):
+        print(content)
+    else:
+        print("Processing summary...")
+        summary = summarize_text_with_chatgpt(content, api_key)
+        if "Failed to generate summary" in summary:
+            print(summary)
+        else:
+            print("Summary of the document:")
+            print(summary)
+            summary_file_id = store_summary_in_db(username, folder_name, original_filename, summary)
+            print(f"Summary stored in database with file ID: {summary_file_id}")
 
 if __name__ == '__main__':
-    nltk.download('punkt')
-    app.run(debug=True)
+    main()
