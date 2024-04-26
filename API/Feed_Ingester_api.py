@@ -1,68 +1,81 @@
 import requests
-from PyPDF2 import PdfFileReader, PdfFileWriter
-import io
-from flask import Flask, request, jsonify
+from pymongo import MongoClient
+import gridfs
+from bson import ObjectId
+import pdfplumber
 
-app = Flask(__name__)
+# MongoDB setup
+client = MongoClient('mongodb://localhost:27017/')
+db = client["Smart_Doc"]
+fs = gridfs.GridFS(db)
+api_key = ''  
 
-GOOGLE_API_KEY = 'my_api_key'
-GOOGLE_CSE_ID = 'my_cse_id'
+# retrieves the analyzed text from the database
+def get_file_content_from_db(file_id):
+    try:
+        file_id = ObjectId(file_id)
+        file = fs.get(file_id)
+        if file.content_type == 'text/plain':
+            content = file.read().decode('utf-8')
+        elif file.content_type == 'application/pdf':
+            with pdfplumber.open(file) as pdf:
+                pages = [page.extract_text() for page in pdf.pages if page.extract_text()]
+                content = ' '.join(pages)
+        else:
+            return None, "Unsupported file type for analysis: {}".format(file.content_type)
+        return content, file.filename
+    except Exception as e:
+        return None, f"Error retrieving file: {str(e)}"
 
-def google_search(query):
-    search_url = "https://www.googleapis.com/customsearch/v1"
-    params = {
-        'key': GOOGLE_API_KEY,
-        'cx': GOOGLE_CSE_ID,
-        'q': query,
+# use chatgpt api to generate 2 keywords from the nlp_analysis text
+def extract_keywords_with_chatgpt(text, api_key, num_keywords=2):
+    headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
+    data = {
+        'model': 'gpt-3.5-turbo',
+        'messages': [{'role': 'system', 'content': f'Generate {num_keywords} key words and separate them using a comma:'},
+                     {'role': 'user', 'content': text}],
+        'max_tokens': 100  # Adjust token count if necessary
     }
-    response = requests.get(search_url, params=params)
-    result = response.json()
-    
-    formatted_results = []
-    for item in result.get("items", []):
-        title = item.get("title")
-        link = item.get("link")
-        formatted_results.append(f"{title}\n{link}\n")
-    
-    return formatted_results
+    response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data)
+    if response.status_code == 200:
+        keywords = response.json()['choices'][0]['message']['content'].strip().split(', ')
+        return keywords
+    else:
+        return [], f"Failed to generate keywords, status code {response.status_code}, response: {response.text}"
+
+google_api_key = ''
+search_engine_id = ''
+
+# use google custon search json api to search for the key words and return top 3 links for each key word
+def google_search(query):
+    url = f"https://www.googleapis.com/customsearch/v1?key={google_api_key}&cx={search_engine_id}&q={query}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        results = response.json()
+        links = [item['link'] for item in results.get('items', [])[:3]]
+        return links
+    else:
+        print(f"Failed to fetch search results: {response.status_code} {response.text}") 
+        return []
 
 
-@app.route('/enhance_pdf_with_search', methods=['POST'])
-def enhance_pdf_with_search():
-    original_filename = request.form['filename']
-    search_query = request.form['search_query']
+def main():
+    file_id = input("Enter the file_id of the document to analyze: ")
+    content, error = get_file_content_from_db(file_id)
+    if content is None:
+        print(f"Failed to retrieve the document: {error}")
+        return
 
-    # Perform web search
-    search_results = google_search(search_query)
+    keywords = extract_keywords_with_chatgpt(content, api_key)
+    for keyword in keywords:
+        print(f"Extracted keyword: {keyword}")
+        links = google_search(keyword)
+        if links:
+            print(f"Top 3 relevant links for '{keyword}':")
+            for link in links:
+                print(link)
+        else:
+            print("No links found for the keyword.")
 
-    # Generate a new PDF with search results
-    search_results_pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], f"search_results_{original_filename}.pdf")
-    c = canvas.Canvas(search_results_pdf_path, pagesize=letter)
-    text_object = c.beginText(40, 750)
-    text_object.textLine(f"Web Search Results for: {search_query}")
-    for result in search_results:
-        text_object.textLine(result)
-    c.drawText(text_object)
-    c.save()
-
-    # Merge the original NLP analysis PDF and the new search results PDF
-    merged_pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], f"NLP_analysis_enhanced_{original_filename}.pdf")
-    output = PdfFileWriter()
-
-    # Read the original NLP analysis PDF
-    with open(os.path.join(app.config['UPLOAD_FOLDER'], f"NLP_analysis_{original_filename}.pdf"), "rb") as f:
-        reader = PdfFileReader(f)
-        for page in range(reader.getNumPages()):
-            output.addPage(reader.getPage(page))
-
-    # Read the new search results PDF
-    with open(search_results_pdf_path, "rb") as f:
-        reader = PdfFileReader(f)
-        for page in range(reader.getNumPages()):
-            output.addPage(reader.getPage(page))
-
-    # Write the merged PDF
-    with open(merged_pdf_path, "wb") as f:
-        output.write(f)
-
-    return jsonify({"status": "Enhancement complete", "enhanced_pdf": merged_pdf_path})
+if __name__ == '__main__':
+    main()

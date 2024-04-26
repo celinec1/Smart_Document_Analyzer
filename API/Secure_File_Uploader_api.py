@@ -78,24 +78,24 @@ def delete_file_from_db(username, folder_name, file_id):
 
 def main():
     # Upload a file
-    username = input("Enter your username: ")
-    folder_name = input("Enter folder name to upload to: ")
-    file_path = input("Enter the full path of the file you want to upload: ")
-    custom_filename = input("Enter the name you want to save the file as (or press Enter to keep the original name): ")
+    # username = input("Enter your username: ")
+    # folder_name = input("Enter folder name to upload to: ")
+    # file_path = input("Enter the full path of the file you want to upload: ")
+    # custom_filename = input("Enter the name you want to save the file as (or press Enter to keep the original name): ")
     
-    upload_result = upload_file_to_db(username, folder_name, file_path, custom_filename)
-    print(upload_result)
+    # upload_result = upload_file_to_db(username, folder_name, file_path, custom_filename)
+    # print(upload_result)
     
     # Retrieve a file
-    # file_id = input("Enter the file_id of the file you want to retrieve: ")
-    # download_path = input("Enter the directory where you want to save the downloaded file: ")
-    # saved_file_path, message = get_file_from_db(file_id, download_path)
+    file_id = input("Enter the file_id of the file you want to retrieve: ")
+    download_path = input("Enter the directory where you want to save the downloaded file: ")
+    saved_file_path, message = get_file_from_db(file_id, download_path)
     
     
-    # if saved_file_path:
-    #     print(f"Retrieved and wrote file to {saved_file_path}")
-    # else:
-    #     print(message)
+    if saved_file_path:
+        print(f"Retrieved and wrote file to {saved_file_path}")
+    else:
+        print(message)
 
     # delete_file = input("Do you want to delete a file? (yes/no): ")
     # if delete_file.lower() == 'yes':
