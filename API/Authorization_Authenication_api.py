@@ -34,12 +34,16 @@ from pymongo import MongoClient
 import bcrypt
 import json
 
-# MongoDB setup
-client = MongoClient('mongodb://localhost:27017/')
-db = client["Smart_Doc"]
+def get_db(client=None):
+    if client is None:
+        client = MongoClient('mongodb://localhost:27017/')
+    return client["Smart_Doc"]
 
-def login(username, password):
-    password = password.encode('utf-8')  # Ensure password is in bytes
+def login(username, password, db=None):
+    if db is None:
+        db = get_db()
+
+    password = password.encode('utf-8') 
 
     # Find user in the database
     user = db.users.find_one({"username": username})
@@ -52,6 +56,7 @@ def login(username, password):
             return json.dumps({"error": "Enter valid username and password"}), 401
     else:
         return json.dumps({"error": "Enter a valid username"}), 404
+
 
 # if __name__ == '__main__':
 #     username = input("Enter username: ")
