@@ -1,4 +1,4 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, mock_open
 import pytest
 from API.Authorization_Authenication_api import login
 import bcrypt
@@ -44,11 +44,11 @@ def test_invalid_login(mock_get_db):
     assert status_code == 401
     assert 'Enter valid username and password' in message
 
-# Mock the gridfs and MongoDB interactions
+
+@patch('API.Secure_File_Uploader_api.open', new_callable=mock_open, read_data="data")
 @patch('API.Secure_File_Uploader_api.gridfs.GridFS')
 @patch('API.Secure_File_Uploader_api.MongoClient')
-def test_upload_pdf_success(mock_mongo_client, mock_grid_fs):
-    # Setting up the mock database
+def test_upload_pdf_success(mock_mongo_client, mock_grid_fs, mock_file):
     mock_db = MagicMock()
     mock_client = MagicMock()
     mock_client.__getitem__.return_value = mock_db
@@ -57,17 +57,15 @@ def test_upload_pdf_success(mock_mongo_client, mock_grid_fs):
     mock_grid_fs.return_value = mock_fs
     mock_fs.put.return_value = 'mock_file_id'
 
-    # Perform the test
     result = upload_file_to_db('celine', 'documents', '/path/to/document.pdf', 'document.pdf')
-
-    # Check that the function returns a success message and file_id
     assert result == {'status': 'File successfully uploaded', 'file_id': 'mock_file_id'}
     mock_fs.put.assert_called_once()
 
+@patch('API.Secure_File_Uploader_api.allowed_file', return_value=True)  # Force allowed_file to return True for testing unsupported types
+@patch('API.Secure_File_Uploader_api.open', new_callable=mock_open, read_data="data")
 @patch('API.Secure_File_Uploader_api.gridfs.GridFS')
 @patch('API.Secure_File_Uploader_api.MongoClient')
-def test_upload_mp4_unsupported(mock_mongo_client, mock_grid_fs):
-    # Setting up the mock database
+def test_upload_mp4_unsupported(mock_mongo_client, mock_grid_fs, mock_file, mock_allowed_file):
     mock_db = MagicMock()
     mock_client = MagicMock()
     mock_client.__getitem__.return_value = mock_db
@@ -75,9 +73,6 @@ def test_upload_mp4_unsupported(mock_mongo_client, mock_grid_fs):
     mock_fs = MagicMock()
     mock_grid_fs.return_value = mock_fs
 
-    # Perform the test
     result = upload_file_to_db('celine', 'videos', '/path/to/video.mp4', 'video.mp4')
-
-    # Check that the function returns an error for unsupported file type
     assert result == {'status': 'Unsupported file type', 'file_id': None}
     mock_fs.put.assert_not_called()
