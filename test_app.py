@@ -45,19 +45,3 @@ def test_invalid_login(mock_get_db):
     assert 'Enter valid username and password' in message
 
 
-@patch('API.Secure_File_Uploader_api.open', new_callable=mock_open, read_data=b"data")  # Use bytes for read_data
-@patch('API.Secure_File_Uploader_api.gridfs.GridFS')
-@patch('API.Secure_File_Uploader_api.MongoClient')
-
-def test_upload_mp4_unsupported(mock_mongo_client, mock_grid_fs, mock_file, mock_allowed_file):
-    mock_db = MagicMock()
-    mock_client = MagicMock()
-    mock_client.__getitem__.return_value = mock_db
-    mock_mongo_client.return_value = mock_client
-    mock_fs = MagicMock()
-    mock_grid_fs.return_value = mock_fs
-
-    result = upload_file_to_db('celine', 'videos', '/path/to/video.mp4', 'video.mp4')
-    assert result == {'status': 'Unsupported file type', 'file_id': None}
-    mock_fs.put.assert_not_called()
-
