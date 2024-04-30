@@ -1,9 +1,10 @@
 from unittest.mock import patch
 import pytest
-from API.Authorization_Authenication_api import login, get_db
+from API.Authorization_Authenication_api import login
 import bcrypt
 import mongomock
 
+# Use the patch decorator to mock the get_db function for each test
 @patch('API.Authorization_Authenication_api.get_db')
 def test_valid_login(mock_get_db):
     """ Test login with valid credentials """
@@ -25,12 +26,13 @@ def test_valid_login(mock_get_db):
     assert status_code == 200
     assert 'Authentication approved' in message
 
+@patch('API.Authorization_Authenication_api.get_db')
 def test_invalid_login(mock_get_db):
-    """ Test login with valid credentials """
+    """ Test login with invalid credentials """
     mock_client = mongomock.MongoClient()
     mock_db = mock_client.db
     mock_get_db.return_value = mock_db
-
+    
     mock_users = mock_db.users
     mock_users.insert_one({'username': 'celine', 'password': bcrypt.hashpw('testing'.encode('utf-8'), bcrypt.gensalt())})
 
@@ -39,6 +41,4 @@ def test_invalid_login(mock_get_db):
     message, status_code = login(username, password)
 
     assert status_code == 401
-    assert 'Authentication not approved' in message
-
-
+    assert 'Enter valid username and password' in message  
