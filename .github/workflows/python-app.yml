@@ -30,6 +30,7 @@ jobs:
         pip install pymongo
         pip install bcrypt
         pip install mongomock
+        pip install werkzeug
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
       run: |
