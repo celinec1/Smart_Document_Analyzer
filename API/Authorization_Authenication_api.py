@@ -28,40 +28,33 @@
 # if __name__ == '__main__':
 #     app.run(debug=True)
 
-# this will be easier to testfrom flask import Flask, request, jsonify
+# this will be easier to test
+
 from pymongo import MongoClient
 import bcrypt
-from flask import Flask, request, jsonify
+import json
 
-# Create the Flask app
-def create_app(test_config=None):
-    app = Flask(__name__)
+# MongoDB setup
+client = MongoClient('mongodb://localhost:27017/')
+db = client["Smart_Doc"]
 
-    if test_config:
-        app.config.update(test_config)
+def login(username, password):
+    password = password.encode('utf-8')  # Ensure password is in bytes
 
-    # MongoDB setup
-    client = MongoClient('mongodb://localhost:27017/')
-    db = client["Smart_Doc"]
+    # Find user in the database
+    user = db.users.find_one({"username": username})
 
-    @app.route('/login', methods=['POST'])
-    def login():
-        username = request.json.get('username')
-        password = request.json.get('password').encode('utf-8') 
-
-        # Find user in the database
-        user = db.users.find_one({"username": username})
-
-        if user:
-            if bcrypt.checkpw(password, user['password']):
-                return jsonify({"message": "Authentication approved"}), 200
-            else:
-                return jsonify({"error": "Enter valid username and password"}), 401
+    if user:
+        # Check if the password matches
+        if bcrypt.checkpw(password, user['password']):
+            return json.dumps({"message": "Authentication approved"}), 200
         else:
-            return jsonify({"error": "Enter a valid username"}), 404
+            return json.dumps({"error": "Enter valid username and password"}), 401
+    else:
+        return json.dumps({"error": "Enter a valid username"}), 404
 
-    return app
-
-if __name__ == '__main__':
-    app = create_app()
-    app.run(debug=True)
+# if __name__ == '__main__':
+#     username = input("Enter username: ")
+#     password = input("Enter password: ")
+#     message, status_code = login(username, password)
+#     print(f"Status Code: {status_code}, Response: {message}")
