@@ -1,22 +1,19 @@
-from API import create_app
 import pytest
+from API.Authorization_Authenication_api import login 
 
-
-@pytest.fixture
-def client():
-    app = create_app({'TESTING': True, 'MONGO_URI': 'mongodb://your_test_db_url'})
-    with app.test_client() as client:
-        yield client
-
-def test_valid_login(client):
+def test_valid_login():
     """ Test login with valid credentials """
-    response = client.post('/login', json={'username': 'celine', 'password': 'testing'})
-    assert response.status_code == 200
-    assert response.json['message'] == 'Authentication approved'
+    username = 'celine'
+    password = 'testing'
+    message, status_code = login(username, password)
+    assert status_code == 200
+    assert 'Authentication approved' in message
 
-def test_invalid_login(client):
+def test_invalid_login():
     """ Test login with invalid password """
-    response = client.post('/login', json={'username': 'celine', 'password': 'hello'})
-    assert response.status_code == 401
-    assert response.json['error'] == 'Enter valid username and password'
+    username = 'celine'
+    password = 'hello'
+    message, status_code = login(username, password)
+    assert status_code == 401
+    assert 'Enter valid username and password' in message
 
