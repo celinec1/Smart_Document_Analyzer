@@ -38,7 +38,7 @@ def test_invalid_login(mock_get_db):
     mock_users.insert_one({'username': 'celine', 'password': bcrypt.hashpw('testing'.encode('utf-8'), bcrypt.gensalt())})
 
     username = 'celine'
-    password = 'hello'
+    password = 'hello123'
     message, status_code = login(username, password)
 
     assert status_code == 401
