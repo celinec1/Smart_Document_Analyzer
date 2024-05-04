@@ -12,40 +12,76 @@ fs = gridfs.GridFS(db)
 api_key = ''
 
 
+# def get_file_content_from_db(file_id):
+#     """Retrieve file content from GridFS by file ID, decode based on file type, and return metadata."""
+#     try:
+#         file_id = ObjectId(file_id)
+#         file = fs.get(file_id)
+#         print(f"Found file with ID {file_id}. Content type: {file.content_type}")  # Diagnostic information
+#         if file.content_type == 'text/plain':
+#             content = file.read().decode('utf-8')
+#             return content, file.filename, file.metadata
+#         elif file.content_type == 'application/pdf':
+#             with pdfplumber.open(file) as pdf:
+#                 pages = [page.extract_text() for page in pdf.pages]
+#                 content = ' '.join(filter(None, pages))  # Join non-None content
+#             return content, file.filename, file.metadata
+#         else:
+#             return "Unsupported file type for summarization: {}".format(file.content_type), None, None
+#     except gridfs.NoFile:
+#         return "File not found.", None, None
+#     except UnicodeDecodeError as e:
+#         return f"Unicode decoding error: {str(e)}", None, None
+#     except Exception as e:
+#         return f"Error processing file: {str(e)}", None, None
+
 def get_file_content_from_db(file_id):
-    """Retrieve file content from GridFS by file ID, decode based on file type, and return metadata."""
     try:
         file_id = ObjectId(file_id)
         file = fs.get(file_id)
-        print(f"Found file with ID {file_id}. Content type: {file.content_type}")  # Diagnostic information
-        if file.content_type == 'text/plain':
-            content = file.read().decode('utf-8')
-            return content, file.filename, file.metadata
-        elif file.content_type == 'application/pdf':
+        if file.content_type == 'application/pdf':
             with pdfplumber.open(file) as pdf:
-                pages = [page.extract_text() for page in pdf.pages]
-                content = ' '.join(filter(None, pages))  # Join non-None content
+                pages = [page.extract_text() or '' for page in pdf.pages]
+                content = ' '.join(pages).strip()
             return content, file.filename, file.metadata
         else:
-            return "Unsupported file type for summarization: {}".format(file.content_type), None, None
+            return f"Unsupported file type: {file.content_type}", None, None
     except gridfs.NoFile:
         return "File not found.", None, None
-    except UnicodeDecodeError as e:
-        return f"Unicode decoding error: {str(e)}", None, None
     except Exception as e:
-        return f"Error processing file: {str(e)}", None, None
+        return f"Error processing PDF file: {str(e)}", None, None
 
-def summarize_text_with_chatgpt(text, api_key):
-    """Uses ChatGPT to generate a summary for the provided text."""
+
+def summarize_text_with_chatgpt(text):
+    """Uses ChatGPT to generate a summary for the provided text"""
+    api_key = ''
     headers = {
         'Authorization': f'Bearer {api_key}',
         'Content-Type': 'application/json',
     }
     data = {
         'model': 'gpt-3.5-turbo',  # Ensure this model is available and appropriate for your usage
-        'messages': [{'role': 'system', 'content': 'Summarize this text:'},
+        'messages': [{'role': 'system', 'content': 'Summarize this text'},
                      {'role': 'user', 'content': text}],
-        'max_tokens': 150
+        # 'max_tokens': 300
+    }
+    response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data)
+    if response.status_code == 200:
+        return response.json()['choices'][0]['message']['content'].strip()
+    else:
+        return f"Failed to generate summary, status code {response.status_code}, response: {response.text}"
+    
+def nlp_analysis(text):
+    api_key = ''
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+    }
+    data = {
+        'model': 'gpt-3.5-turbo',  # Ensure this model is available and appropriate for your usage
+        'messages': [{'role': 'system', 'content': 'Do NLP Analysis on this text'},
+                     {'role': 'user', 'content': text}],
+        # 'max_tokens': 300
     }
     response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data)
     if response.status_code == 200:
@@ -72,28 +108,28 @@ def store_summary_in_db(username, folder_name, original_filename, summary):
     return file_id
 
 
-def main():
-    username = input("Enter username: ")
-    folder_name = input("Enter folder name: ")
-    file_id_input = input("Enter the file_id of the text file you want to summarize: ")
-    content, original_filename, _ = get_file_content_from_db(file_id_input)
+# def main():
+    # folder_name = input("Enter folder name: ")
+    # file_id_input = input("Enter the file_id of the text file you want to summarize: ")
+    # content, original_filename, _ = get_file_content_from_db(file_id_input)
     
-    if original_filename is None:
-        print("Failed to retrieve the file or unsupported file type.")
-        return
+    # if original_filename is None:
+    #     print("Failed to retrieve the file or unsupported file type.")
+    #     return
     
-    if content.startswith("File not found") or content.startswith("Error"):
-        print(content)
-    else:
-        print("Processing summary...")
-        summary = summarize_text_with_chatgpt(content, api_key)
-        if "Failed to generate summary" in summary:
-            print(summary)
-        else:
-            print("Summary of the document:")
-            print(summary)
-            summary_file_id = store_summary_in_db(username, folder_name, original_filename, summary)
-            print(f"Summary stored in database with file ID: {summary_file_id}")
+    # if content.startswith("File not found") or content.startswith("Error"):
+    #     print(content)
+    # else:
+    #     print("Processing summary...")
+    #     summary = summarize_text_with_chatgpt(content, api_key)
+    #     if "Failed to generate summary" in summary:
+    #         print(summary)
+    #     else:
+    #         print("Summary of the document:")
+    #         print(summary)
+    #         summary_file_id = store_summary_in_db(username, folder_name, original_filename, summary)
+    #         print(f"Summary stored in database with file ID: {summary_file_id}")
+    
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()

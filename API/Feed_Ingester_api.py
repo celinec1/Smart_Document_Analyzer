@@ -28,13 +28,13 @@ def get_file_content_from_db(file_id):
         return None, f"Error retrieving file: {str(e)}"
 
 # use chatgpt api to generate 2 keywords from the nlp_analysis text
-def extract_keywords_with_chatgpt(text, api_key, num_keywords=2):
+def extract_keywords_with_chatgpt(text):
+    api_key = ''
     headers = {'Authorization': f'Bearer {api_key}', 'Content-Type': 'application/json'}
     data = {
         'model': 'gpt-3.5-turbo',
-        'messages': [{'role': 'system', 'content': f'Generate {num_keywords} key words and separate them using a comma:'},
+        'messages': [{'role': 'system', 'content': f'Generate 2 key words and separate them using a comma:'},
                      {'role': 'user', 'content': text}],
-        'max_tokens': 100  # Adjust token count if necessary
     }
     response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data)
     if response.status_code == 200:
@@ -42,7 +42,6 @@ def extract_keywords_with_chatgpt(text, api_key, num_keywords=2):
         return keywords
     else:
         return [], f"Failed to generate keywords, status code {response.status_code}, response: {response.text}"
-
 google_api_key = ''
 search_engine_id = ''
 
