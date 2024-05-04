@@ -1,0 +1,67 @@
+body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    background-color: #f4f4f4;
+}
+
+h1 {
+    color: #333;
+}
+
+.folder {
+    width: 100px;
+    height: 100px;
+    background-color: #007BFF;
+    color: white;
+    padding: 10px;
+    margin: 10px;
+    display: inline-block;
+    text-align: center;
+    vertical-align: top;
+    cursor: pointer;
+    position: relative;
+}
+
+.folder img {
+    display: block;
+    margin: 0 auto;
+    width: 50px; /* Adjust the size of your icon image */
+    height: 50px; /* Adjust the size of your icon image */
+}
+
+.folder span {
+    display: block;
+    margin-top: 10px;
+    color: white;
+}
+
+input[type="text"], button {
+    margin-top: 20px;
+    padding: 10px;
+    font-size: 16px;
+}
+
+button {
+    cursor: pointer;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+}
+
+
+button:hover {
+    background-color: #218838;
+}
+
+#foldersList {
+    margin-top: 20px;
+}
+
+.folder div {
+    background-color: #f8f9fa;
+    color: #333;
+    border: 1px solid #ccc;
+    padding: 10px;
+    display: none; /* Hide the file list initially */
+}

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Documents</title>
+    <link rel="stylesheet" href="/static/styles.css"> <!-- Assume you have some CSS for styling -->
+    <script src="/static/app.js" defer></script>
+</head>
+<body>
+    <h1>My Documents</h1>
+    <p>Welcome, {{ username }}!</p>
+    <div>
+        <input type="text" id="folderName" placeholder="Enter folder name">
+        <button onclick="createFolder()">Create Folder</button>
+    </div>
+    <div id="foldersList">
+        {% for folder in folders %}
+            <div class="folder" onclick="window.location.href='/folder/{{ folder.folder_name }}'">
+                <img src="/static/folder-icon.png" alt="Folder">
+                <span>{{ folder.folder_name }}</span>
+            </div>
+        {% endfor %}
+    </div>
+    
+
+    <button onclick="logout()">Logout</button>
+</body>
+</html>
