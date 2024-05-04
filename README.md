@@ -93,11 +93,10 @@ Implements a queue for managing the processing of NLP analysis and secure file u
 ### Instructions for Developers
 
 1. Clone the repository to your local environment.
-2. Install the required dependencies specified in requirements.txt and run dockerfile
-3. Install Mongodb
-4. Run app.py in the app folder
-5. Put in API keys to ensure OpenAI and Google Search Custon JSON API can run
-6. Open your web browser at http://127.0.0.1:5000
+2. Install Mongodb and run mongosh
+3. Put in API keys to ensure OpenAI and Google Search Custon JSON API can run
+4. Run python3 app.py
+5. Open your web browser at http://127.0.0.1:5000
 
 ### Summary:
 Overall, I learned a lot from this project, especially about how to efficiently use APIs and create modular functions. This was a significant takeaway for me, as I had not previously written isolated backend code and then connected it with the frontend. One of the toughest challenges I faced was the high modularity, which made me feel like I was creating unnecessary functions and files in the frontend, requiring extensive imports of libraries and components in JavaScript. However, as we learned in EC530, not all code is used—software developers often write more code than is actually needed. Given more time, I would explore React libraries like Tailwind to create a more captivating frontend. Additionally, I plan to integrate more APIs into this project, such as text-to-speech capabilities to enhance accessibility and ease of use.
