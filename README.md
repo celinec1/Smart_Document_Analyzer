@@ -98,5 +98,3 @@ Implements a queue for managing the processing of NLP analysis and secure file u
 4. Run python3 app.py
 5. Open your web browser at http://127.0.0.1:5000
 
-### Summary:
-Overall, I learned a lot from this project, especially about how to efficiently use APIs and create modular functions. This was a significant takeaway for me, as I had not previously written isolated backend code and then connected it with the frontend. One of the toughest challenges I faced was the high modularity, which made me feel like I was creating unnecessary functions and files in the frontend, requiring extensive imports of libraries and components in JavaScript. However, as we learned in EC530, not all code is used—software developers often write more code than is actually needed. Given more time, I would explore React libraries like Tailwind to create a more captivating frontend. Additionally, I plan to integrate more APIs into this project, such as text-to-speech capabilities to enhance accessibility and ease of use.
